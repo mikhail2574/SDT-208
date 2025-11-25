@@ -1,0 +1,48 @@
+(The screenshots are only taken from the "explain" query)
+1.
+-- INNER JOIN: only students that have at least one enrollment
+SELECT
+  s.id        AS student_id,
+  s.full_name AS student_name,
+  e.course_id,
+  e.enrolled_at,
+  e.grade
+FROM students s
+INNER JOIN enrollments e
+  ON s.id = e.student_id;
+
+2.
+-- LEFT JOIN: all students, with enrollments if they exist
+SELECT
+  s.id        AS student_id,
+  s.full_name AS student_name,
+  e.course_id,
+  e.enrolled_at,
+  e.grade
+FROM students s
+LEFT JOIN enrollments e
+  ON s.id = e.student_id;
+
+3.
+-- RIGHT JOIN: all enrollments, with student info if exists
+SELECT
+  s.id        AS student_id,
+  s.full_name AS student_name,
+  e.course_id,
+  e.enrolled_at,
+  e.grade
+FROM students s
+RIGHT JOIN enrollments e
+  ON s.id = e.student_id;
+
+4.
+-- FULL OUTER JOIN: all students and all enrollments, matched when possible
+SELECT
+  s.id        AS student_id,
+  s.full_name AS student_name,
+  e.course_id,
+  e.enrolled_at,
+  e.grade
+FROM students s
+FULL OUTER JOIN enrollments e
+  ON s.id = e.student_id;

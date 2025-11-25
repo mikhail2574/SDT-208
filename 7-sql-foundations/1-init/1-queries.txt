@@ -1,0 +1,67 @@
+-- CREATE TABLE
+CREATE TABLE students (
+  id              SERIAL PRIMARY KEY,
+  full_name       VARCHAR(100) NOT NULL,
+  email           VARCHAR(100) NOT NULL UNIQUE,
+  enrollment_year INT NOT NULL
+);
+
+CREATE TABLE student_profiles (
+  student_id    INT PRIMARY KEY,
+  date_of_birth DATE,
+  major         VARCHAR(100),
+  phone         VARCHAR(20),
+  CONSTRAINT fk_student_profiles_student
+    FOREIGN KEY (student_id) REFERENCES students(id)
+);
+
+CREATE TABLE courses (
+  id      SERIAL PRIMARY KEY,
+  code    VARCHAR(10) NOT NULL UNIQUE,
+  title   VARCHAR(100) NOT NULL,
+  credits INT NOT NULL
+);
+
+CREATE TABLE enrollments (
+  student_id  INT NOT NULL,
+  course_id   INT NOT NULL,
+  enrolled_at DATE NOT NULL,
+  grade       VARCHAR(2),
+  PRIMARY KEY (student_id, course_id),
+  CONSTRAINT fk_enrollments_student
+    FOREIGN KEY (student_id) REFERENCES students(id),
+  CONSTRAINT fk_enrollments_course
+    FOREIGN KEY (course_id) REFERENCES courses(id)
+);
+
+-- INSERT DATA
+INSERT INTO students (id, full_name, email, enrollment_year) VALUES
+  (1, 'Alice Smith',  'alice@example.com', 2023),
+  (2, 'Bob Johnson',  'bob@example.com',   2022),
+  (3, 'Carla Gomez',  'carla@example.com', 2023),
+  (4, 'David Lee',    'david@example.com', 2021),
+  (5, 'Eva Müller',   'eva@example.com',   2022);
+
+INSERT INTO student_profiles (student_id, date_of_birth, major, phone) VALUES
+  (1, '2004-01-15', 'Computer Science', '+49 151 00000001'),
+  (2, '2003-05-20', 'Information Systems', '+49 151 00000002'),
+  (3, '2004-09-03', 'Data Science', '+49 151 00000003'),
+  (4, '2002-11-11', 'Physics', '+49 151 00000004'),
+  (5, '2003-02-28', 'Mathematics', '+49 151 00000005');
+
+INSERT INTO courses (id, code, title, credits) VALUES
+  (1, 'CS101', 'Intro to Programming', 5),
+  (2, 'CS102', 'Databases',            5),
+  (3, 'MA101', 'Calculus I',           6),
+  (4, 'PH101', 'Physics I',            6),
+  (5, 'CS201', 'Algorithms',           6);
+
+INSERT INTO enrollments (student_id, course_id, enrolled_at, grade) VALUES
+  (1, 1, '2023-10-01', 'A'),
+  (1, 2, '2023-10-01', 'B'),
+  (2, 1, '2022-10-01', 'B'),
+  (2, 3, '2022-10-01', 'A'),
+  (3, 1, '2023-10-01', NULL),
+  (3, 2, '2023-10-01', NULL),
+  (4, 3, '2021-10-01', 'C'),
+  (5, 2, '2022-10-01', 'B');

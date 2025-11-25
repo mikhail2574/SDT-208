@@ -1,0 +1,17 @@
+1.
+-- Query filtered by credits (before index)
+EXPLAIN ANALYZE
+SELECT id, code, title, credits
+FROM courses
+WHERE credits >= 6;
+
+-- Create index on frequently filtered column
+CREATE INDEX idx_courses_credits
+ON courses (credits);
+
+2.
+-- Query filtered by credits (after index)
+EXPLAIN ANALYZE
+SELECT id, code, title, credits
+FROM courses
+WHERE credits >= 6;

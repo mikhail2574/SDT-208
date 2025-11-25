@@ -1,0 +1,76 @@
+What did I do(results in screenshots in the same folder):
+
+1.A
+SELECT id, code, title, credits
+FROM courses
+WHERE credits >= 5;
+
+1.B
+SELECT id, code, title, credits
+FROM courses
+WHERE credits >= 5;
+
+2.A
+-- Join query: get enrolled students with their courses
+SELECT
+  s.id          AS student_id,
+  s.full_name   AS student_name,
+  c.code        AS course_code,
+  c.title       AS course_title,
+  e.enrolled_at,
+  e.grade
+FROM enrollments e
+INNER JOIN students s ON e.student_id = s.id
+INNER JOIN courses  c ON e.course_id  = c.id;
+
+2.B
+EXPLAIN
+SELECT
+  s.id          AS student_id,
+  s.full_name   AS student_name,
+  c.code        AS course_code,
+  c.title       AS course_title,
+  e.enrolled_at,
+  e.grade
+FROM enrollments e
+INNER JOIN students s ON e.student_id = s.id
+INNER JOIN courses  c ON e.course_id  = c.id;
+
+2.C (with filter)
+SELECT
+  s.id          AS student_id,
+  s.full_name   AS student_name,
+  c.code        AS course_code,
+  c.title       AS course_title,
+  e.enrolled_at,
+  e.grade
+FROM enrollments e
+inner JOIN students s ON e.student_id = s.id
+inner JOIN courses  c ON e.course_id  = c.id
+where c.code = 'CS101';
+
+3.A
+explain analyze
+SELECT
+  s.id          AS student_id,
+  s.full_name   AS student_name,
+  c.code        AS course_code,
+  c.title       AS course_title,
+  e.enrolled_at,
+  e.grade
+FROM enrollments e
+inner JOIN students s ON e.student_id = s.id
+inner JOIN courses  c ON e.course_id  = c.id;
+3.B
+explain analyze
+SELECT
+  s.id          AS student_id,
+  s.full_name   AS student_name,
+  c.code        AS course_code,
+  c.title       AS course_title,
+  e.enrolled_at,
+  e.grade
+FROM enrollments e
+inner JOIN students s ON e.student_id = s.id
+inner JOIN courses  c ON e.course_id  = c.id
+where c.code = 'CS101';

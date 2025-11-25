@@ -1,0 +1,89 @@
+Table users {
+  id              int [pk, increment]
+  email           varchar [not null, unique]
+  password_hash   varchar [not null]
+  full_name       varchar [not null]
+  is_active       boolean [not null, default: true]
+  created_at      timestamp [not null]
+}
+
+Table roles {
+  id          int [pk, increment]
+  name        varchar [not null, unique] // e.g. ADMIN, AUTHOR, TEST_TAKER
+  description varchar
+}
+
+Table user_roles {
+  user_id int [not null]
+  role_id int [not null]
+
+  Indexes {
+    (user_id, role_id) [pk]
+  }
+}
+
+Table tests {
+  id                 int [pk, increment]
+  title              varchar [not null]
+  description        text
+  difficulty         smallint
+  time_limit_seconds int
+  is_published       boolean [not null, default: false]
+  created_by         int [not null] // FK -> users
+  created_at         timestamp [not null]
+  updated_at         timestamp [not null]
+}
+
+Table questions {
+  id          int [pk, increment]
+  test_id     int [not null] // FK -> tests
+  text        text [not null]
+  type        varchar [not null] // single_choice, multiple_choice, free_text
+  order_index int [not null]
+  points      numeric(5,2) [not null]
+}
+
+Table answer_options {
+  id          int [pk, increment]
+  question_id int [not null] // FK -> questions
+  text        text [not null]
+  is_correct  boolean [not null, default: false]
+  order_index int [not null]
+}
+
+Table attempts {
+  id               int [pk, increment]
+  user_id          int [not null] // FK -> users
+  test_id          int [not null] // FK -> tests
+  started_at       timestamp [not null]
+  finished_at      timestamp
+  status           varchar [not null] // in_progress, completed, cancelled, expired
+  score_obtained   numeric(6,2)
+  max_score_cached numeric(6,2) [not null]
+}
+
+Table attempt_answers {
+  id                 int [pk, increment]
+  attempt_id         int [not null] // FK -> attempts
+  question_id        int [not null] // FK -> questions
+  selected_option_id int           // FK -> answer_options, nullable
+  free_text_answer   text
+  is_correct         boolean
+  points_obtained    numeric(5,2)
+}
+
+Ref: user_roles.user_id > users.id
+Ref: user_roles.role_id > roles.id
+
+Ref: tests.created_by > users.id
+
+Ref: questions.test_id > tests.id
+
+Ref: answer_options.question_id > questions.id
+
+Ref: attempts.user_id > users.id
+Ref: attempts.test_id > tests.id
+
+Ref: attempt_answers.attempt_id > attempts.id
+Ref: attempt_answers.question_id > questions.id
+Ref: attempt_answers.selected_option_id > answer_options.id

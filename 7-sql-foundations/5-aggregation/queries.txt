@@ -1,0 +1,31 @@
+1.
+-- Average number of credits per course
+SELECT AVG(credits) AS avg_credits
+FROM courses;
+
+-- Min and max credits
+SELECT
+  MIN(credits) AS min_credits,
+  MAX(credits) AS max_credits
+FROM courses;
+
+2.
+-- Count enrollments per course and filter groups (+ explain analyze)
+SELECT
+  c.id,
+  c.code,
+  c.title,
+  COUNT(e.student_id) AS enrollment_count
+FROM courses c
+LEFT JOIN enrollments e
+  ON c.id = e.course_id
+GROUP BY c.id, c.code, c.title
+HAVING COUNT(e.student_id) >= 2
+ORDER BY enrollment_count DESC;
+
+Improvement proposals:
+
+1. Use indexes on join and filter columns (e.g., enrollments.course_id, courses.credits) to reduce scan cost before aggregation.
+2. Use materialized views to pre-aggregate frequently used statistics (e.g., enrollment counts per course) and refresh them periodically.
+3. Use table partitioning (by year, semester, etc.) to limit the amount of data scanned for queries that filter by time ranges.
+4. Use proper statistics and VACUUM/ANALYZE so that the planner has accurate row count estimates and chooses good plans.

@@ -1,0 +1,52 @@
+1.a-b
+-- Starting query: list students and their courses, newest enrollments first
+SELECT
+  c.title      AS course_title,
+  s.full_name  AS student_name,
+  e.enrolled_at
+FROM enrollments e
+JOIN students s ON e.student_id = s.id
+JOIN courses  c ON e.course_id  = c.id
+WHERE c.credits >= 5
+ORDER BY e.enrolled_at DESC;
+
+2.a-b
+-- Modified query: add second filter and LIMIT
+SELECT
+  c.title      AS course_title,
+  s.full_name  AS student_name,
+  s.enrollment_year,
+  e.enrolled_at
+FROM enrollments e
+JOIN students s ON e.student_id = s.id
+JOIN courses  c ON e.course_id  = c.id
+WHERE c.credits >= 5               -- filter from courses
+  AND s.enrollment_year >= 2022    -- filter from students
+ORDER BY e.enrolled_at DESC
+LIMIT 10;
+
+Adding indexes
+-- Already from Part 4
+=> Fast finding courses e.g. with credits >= 5, instead of scanning the whole courses
+CREATE INDEX IF NOT EXISTS idx_courses_credits
+ON courses (credits);
+
+-- Index for student filter. Speeding up searching through that column
+CREATE INDEX idx_students_enrollment_year
+ON students (enrollment_year);
+
+-- Index for ordering (and potential range filters by date). Speeding up for index order by or simple filtering date
+CREATE INDEX idx_enrollments_enrolled_at
+ON enrollments (enrolled_at);
+
+-- Final grouped report: number of enrollments per course
+SELECT
+  c.title AS course_title,
+  COUNT(*) AS enrollment_count
+FROM enrollments e
+JOIN students s ON e.student_id = s.id
+JOIN courses  c ON e.course_id  = c.id
+WHERE c.credits >= 5
+  AND s.enrollment_year >= 2022
+GROUP BY c.id, c.title
+ORDER BY enrollment_count DESC;
