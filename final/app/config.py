@@ -3,7 +3,7 @@ from pydantic import BaseSettings, Field
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="postgresql+psycopg2://postgres:postgres@localhost:5432/testhub"
+        default="postgresql+psycopg://postgres:postgres@localhost:5432/testhub"
     )
     app_name: str = "TestHub MVP"
     secret_key: str = Field(default="dev-change-me")
