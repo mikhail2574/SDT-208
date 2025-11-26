@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Attempt #{{ attempt.id }} · Test {{ test.id }}</p>
+            <h1>{{ test.title }}</h1>
+            {% if test.time_limit_seconds %}
+            <p class="muted">Time limit: {{ test.time_limit_seconds // 60 }} minutes (not enforced in UI).</p>
+            {% endif %}
+        </div>
+        <a class="link" href="/tests/{{ test.id }}">Back to test</a>
+    </header>
+
+    {% if errors %}
+    <div class="alert">
+        <p>Please correct:</p>
+        <ul>
+            {% for err in errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form class="form" method="post" action="/attempts/{{ attempt.id }}/submit">
+        {% for question in test.questions %}
+        <div class="question-block">
+            <p class="eyebrow">Question {{ loop.index }}</p>
+            <p class="question-text">{{ question.text }}</p>
+            <p class="muted">Type: {{ question.type.replace("_"," ") }} · {{ question.points }} pts</p>
+
+            {% if question.type == 'free_text' %}
+                <textarea name="q_{{ question.id }}_text" rows="3" placeholder="Type your answer"></textarea>
+            {% elif question.type == 'single_choice' %}
+                <div class="options">
+                    {% for opt in question.answer_options %}
+                    <label class="option-row radio">
+                        <input type="radio" name="q_{{ question.id }}" value="{{ opt.id }}">
+                        <span>{{ opt.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="options">
+                    {% for opt in question.answer_options %}
+                    <label class="option-row checkbox">
+                        <input type="checkbox" name="q_{{ question.id }}" value="{{ opt.id }}">
+                        <span>{{ opt.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button class="primary-btn" type="submit">Submit attempt</button>
+            <a class="ghost-btn" href="/tests/{{ test.id }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

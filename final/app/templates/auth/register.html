@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel narrow">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Join TestHub</p>
+            <h1>Create an account</h1>
+        </div>
+        <a class="link" href="/auth/login">Already have one?</a>
+    </header>
+
+    {% if errors %}
+    <div class="alert">
+        <p>Please fix these issues:</p>
+        <ul>
+            {% for err in errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form class="form" method="post" action="/auth/register">
+        <label>
+            <span>Full name</span>
+            <input name="full_name" required value="{{ form_values.get('full_name','') }}">
+        </label>
+        <label>
+            <span>Email</span>
+            <input name="email" type="email" required value="{{ form_values.get('email','') }}">
+        </label>
+        <label>
+            <span>Password</span>
+            <input name="password" type="password" minlength="8" required>
+        </label>
+        <label class="checkbox">
+            {% set wants_author = form_values.get('wants_author') in ['on', True, 'True'] %}
+            <input name="wants_author" type="checkbox" {% if wants_author %}checked{% endif %}>
+            <span>I want to author tests</span>
+        </label>
+
+        <div class="form-actions">
+            <button class="primary-btn" type="submit">Create account</button>
+            <a class="ghost-btn" href="/tests">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

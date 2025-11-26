@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Question #{{ question.id }} · Test {{ test.id }}</p>
+            <h1>{{ question.text }}</h1>
+            <div class="meta-row">
+                <span class="pill">Type: {{ question.type.replace("_", " ") }}</span>
+                <span class="pill">Order: {{ question.order_index }}</span>
+                <span class="pill">Points: {{ question.points }}</span>
+            </div>
+        </div>
+        {% if can_manage %}
+        <div class="stack">
+            <a class="primary-btn" href="/questions/{{ question.id }}/edit">Edit question</a>
+            <form method="post" action="/questions/{{ question.id }}/delete" onsubmit="return confirm('Delete this question?');">
+                <button class="danger-btn" type="submit">Delete</button>
+            </form>
+        </div>
+        {% endif %}
+    </header>
+
+    {% if question.type != 'free_text' %}
+    <div class="options-grid">
+        <p class="eyebrow">Answer options</p>
+        <ul class="options">
+            {% for option in question.answer_options %}
+            <li class="{{ 'option-correct' if option.is_correct else 'option' }}">
+                {{ option.text }}
+                {% if option.is_correct %}<span class="tag">Correct</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <p class="muted">This is a free text question (no predefined options).</p>
+    {% endif %}
+
+    <div class="form-actions">
+        <a class="ghost-btn" href="/tests/{{ test.id }}">Back to test</a>
+    </div>
+</section>
+{% endblock %}

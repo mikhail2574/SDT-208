@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set values = form_values or {} %}
+{% set action_url = '/tests/new' if not test else '/tests/' ~ test.id ~ '/edit' %}
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">{{ "Create" if not test else "Edit" }} test</p>
+            <h1>{{ page_title }}</h1>
+        </div>
+        <a class="link" href="/tests">Back to list</a>
+    </header>
+
+    {% if errors %}
+    <div class="alert">
+        <p>We found {{ errors|length }} issue{{ '' if errors|length == 1 else 's' }}. Please fix them and try again.</p>
+        <ul>
+            {% for error in errors %}
+            <li><strong>{{ error.loc }}:</strong> {{ error.msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form class="form" method="post" action="{{ action_url }}">
+        <label>
+            <span>Title</span>
+            <input name="title" required maxlength="255" value="{{ values.get('title', test.title if test else '') }}">
+        </label>
+
+        <label>
+            <span>Description</span>
+            <textarea name="description" rows="3" maxlength="2000">{{ values.get('description', test.description if test else '') }}</textarea>
+        </label>
+
+        <div class="grid two">
+            <label>
+                <span>Difficulty (1-5)</span>
+                {% set difficulty_val = values.get('difficulty', test.difficulty if test else '') %}
+                <input name="difficulty" type="number" min="1" max="5" value="{{ difficulty_val }}">
+            </label>
+            <label>
+                <span>Time limit (minutes)</span>
+                {% set time_val = values.get('time_limit_minutes') %}
+                {% if time_val is none and test and test.time_limit_seconds %}{% set time_val = test.time_limit_seconds // 60 %}{% endif %}
+                <input name="time_limit_minutes" type="number" min="0" max="720" value="{{ time_val if time_val is not none else '' }}">
+            </label>
+        </div>
+
+        <label class="checkbox">
+            {% set published_val = values.get('is_published') or (test.is_published if test else False) %}
+            <input name="is_published" type="checkbox" {% if published_val in ['on', True, 'True'] %}checked{% endif %}>
+            <span>Publish now</span>
+        </label>
+
+        <div class="form-actions">
+            <button class="primary-btn" type="submit">Save</button>
+            <a class="ghost-btn" href="{{ '/tests/' ~ test.id if test else '/tests' }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

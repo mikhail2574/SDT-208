@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">Welcome</p>
+        <h1>{{ current_user.full_name }}</h1>
+        <p class="lede">Track your authored tests and recent attempts.</p>
+    </div>
+    <div class="stack">
+        <a class="primary-btn" href="/tests">Browse tests</a>
+        {% if can_author %}
+        <a class="ghost-btn" href="/tests/new">Create test</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Recent attempts</p>
+            <h2>Your last {{ attempts|length }} attempt{{ '' if attempts|length == 1 else 's' }}</h2>
+        </div>
+    </header>
+    {% if attempts %}
+    <div class="list">
+        {% for attempt in attempts %}
+        <div class="list-row">
+            <div>
+                <p class="muted">Test #{{ attempt.test_id }} · {{ attempt.test.title }}</p>
+                <p>Score: {{ attempt.score_obtained or 0 }} / {{ attempt.max_score_cached or 0 }}</p>
+                <p class="muted">Finished: {{ attempt.finished_at or 'In progress' }}</p>
+            </div>
+            <div class="inline-actions">
+                <a class="link" href="/tests/{{ attempt.test_id }}">Test</a>
+                <a class="link" href="/attempts/{{ attempt.id }}/result">Result</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No attempts yet. Start one from any published test.</p>
+    {% endif %}
+</section>
+
+{% if can_author %}
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">My tests</p>
+            <h2>{{ my_tests|length }} authored</h2>
+        </div>
+        <a class="link" href="/tests/new">New test</a>
+    </header>
+    {% if my_tests %}
+    <div class="grid">
+        {% for test in my_tests %}
+        <article class="card">
+            <header>
+                <p class="eyebrow">ID {{ test.id }}</p>
+                <h3><a href="/tests/{{ test.id }}">{{ test.title }}</a></h3>
+            </header>
+            <p class="muted">{{ test.description or 'No description yet.' }}</p>
+            <p class="muted">Questions: {{ test.questions|length }}</p>
+            <div class="inline-actions">
+                <a class="link" href="/tests/{{ test.id }}">View</a>
+                <a class="link" href="/tests/{{ test.id }}/edit">Edit</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">You have not authored any tests yet.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

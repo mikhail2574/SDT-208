@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set values = form_values or {} %}
+{% set action = action_url if action_url is defined else '/tests/' ~ test.id ~ '/questions/new' %}
+{% set is_edit = action != '/tests/' ~ test.id ~ '/questions/new' %}
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Test: {{ test.title }}</p>
+            <h1>{{ "Edit question" if is_edit else "Add a question" }}</h1>
+            <p class="muted">Supports free text or single/multiple choice with up to three options in this MVP.</p>
+        </div>
+        <a class="link" href="/tests/{{ test.id }}">Back to test</a>
+    </header>
+
+    {% if errors %}
+    <div class="alert">
+        <p>Please correct the following:</p>
+        <ul>
+            {% for error in errors %}
+            <li><strong>{{ error.loc }}:</strong> {{ error.msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form class="form" method="post" action="{{ action }}">
+        <label>
+            <span>Question text</span>
+            <textarea name="text" rows="4" required>{{ values.get('text', '') }}</textarea>
+        </label>
+
+        <div class="grid two">
+            <label>
+                <span>Type</span>
+                {% set type_val = values.get('type', 'single_choice') %}
+                <select name="type">
+                    <option value="single_choice" {% if type_val == 'single_choice' %}selected{% endif %}>Single choice</option>
+                    <option value="multiple_choice" {% if type_val == 'multiple_choice' %}selected{% endif %}>Multiple choice</option>
+                    <option value="free_text" {% if type_val == 'free_text' %}selected{% endif %}>Free text</option>
+                </select>
+            </label>
+            <label>
+                <span>Order</span>
+                <input name="order_index" type="number" min="0" value="{{ values.get('order_index', 0) }}">
+            </label>
+        </div>
+
+        <label>
+            <span>Points</span>
+            <input name="points" type="number" step="0.5" min="0" value="{{ values.get('points', 1) }}">
+        </label>
+
+        <div class="options-grid">
+            <p class="eyebrow">Answer options (for choice questions)</p>
+            {% for idx in [1,2,3] %}
+            {% set tval = values.get('option_text_' ~ idx, '') %}
+            {% set checked = values.get('option_correct_' ~ idx) in ['on', True, 'True'] %}
+            <div class="option-row">
+                <input name="option_text_{{ idx }}" placeholder="Option {{ idx }}" value="{{ tval }}">
+                <label class="checkbox inline">
+                    <input name="option_correct_{{ idx }}" type="checkbox" {% if checked %}checked{% endif %}>
+                    <span>Correct</span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button class="primary-btn" type="submit">{{ "Save changes" if is_edit else "Add question" }}</button>
+            <a class="ghost-btn" href="/tests/{{ test.id }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

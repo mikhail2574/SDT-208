@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title or "TestHub" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <a href="/tests">TestHub</a>
+    </div>
+    <nav class="nav-links">
+        <a href="/tests">Tests</a>
+        {% if current_user %}
+            <a href="/dashboard">Dashboard</a>
+            {% if has_role(current_user, "AUTHOR") or has_role(current_user, "ADMIN") %}
+            <a class="cta" href="/tests/new">+ New Test</a>
+            {% endif %}
+            <div class="user-chip">
+                <span class="muted">Hi, {{ current_user.full_name }}</span>
+                <form method="post" action="/auth/logout">
+                    <button class="ghost-btn small" type="submit">Logout</button>
+                </form>
+            </div>
+        {% else %}
+            <a href="/auth/login">Login</a>
+            <a class="cta" href="/auth/register">Sign up</a>
+        {% endif %}
+    </nav>
+</header>
+
+<main class="page">
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

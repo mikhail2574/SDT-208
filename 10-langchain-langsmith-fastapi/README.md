@@ -14,7 +14,7 @@ This repository implements a single FastAPI application that integrates:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 
 pip install -r requirements.txt
 ```
@@ -30,9 +30,9 @@ cp .env.example .env
 
 The app reads:
 
-- `OPENAI_API_KEY` – required for OpenAI / LangChain.
-- `OPENAI_MODEL` – defaults to `gpt-4o-mini`.
-- `LANGSMITH_TRACING` – if `true`, the app will also set `LANGCHAIN_TRACING_V2=true`
+- `OPENAI_API_KEY` - required for OpenAI / LangChain.
+- `OPENAI_MODEL` - defaults to `gpt-4o-mini`.
+- `LANGSMITH_TRACING` - if `true`, the app will also set `LANGCHAIN_TRACING_V2=true`
   so LangSmith tracing is enabled (you must still export `LANGCHAIN_API_KEY` and
   optionally `LANGCHAIN_PROJECT` yourself).
 
@@ -58,8 +58,8 @@ Open the interactive docs at http://127.0.0.1:8000/docs to test `/chat`.
 }
 ```
 
-- `message` – required, non-empty string. Empty/whitespace -> `400` error.
-- `tone` – optional, one of: `friendly`, `formal`, `cheerful`, `concise`
+- `message` - required, non-empty string. Empty/whitespace -> `400` error.
+- `tone` - optional, one of: `friendly`, `formal`, `cheerful`, `concise`
   (case-insensitive). Invalid value -> `400` error. Default is `friendly`.
 
 **Response (200):**

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div>
+        <p class="eyebrow">Test #{{ test.id }}</p>
+        <h1>{{ test.title }}</h1>
+        <p class="lede">{{ test.description or "No description yet." }}</p>
+        <div class="meta-row">
+            <span class="pill">{{ "Published" if test.is_published else "Draft" }}</span>
+            <span class="pill">Difficulty: {{ test.difficulty or "N/A" }}</span>
+            {% if test.time_limit_seconds %}
+                <span class="pill">Time limit: {{ (test.time_limit_seconds // 60) }} min</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stack">
+        {% if can_take %}
+        <form method="post" action="/tests/{{ test.id }}/attempts">
+            <button class="primary-btn" type="submit">Start attempt</button>
+        </form>
+        {% elif current_user %}
+            {% if not test.is_published %}
+            <p class="muted">Test is not published yet.</p>
+            {% elif not test.questions %}
+            <p class="muted">Add questions to enable attempts.</p>
+            {% endif %}
+        {% else %}
+        <a class="primary-btn" href="/auth/login">Login to start</a>
+        {% endif %}
+
+        {% if can_manage %}
+        <a class="ghost-btn" href="/tests/{{ test.id }}/edit">Edit test</a>
+        <a class="ghost-btn" href="/tests/{{ test.id }}/questions/new">Add question</a>
+        <form action="/tests/{{ test.id }}/delete" method="post" onsubmit="return confirm('Delete this test?');">
+            <button class="danger-btn" type="submit">Delete</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Questions</p>
+            <h2>{{ test.questions|length }} question{{ '' if test.questions|length == 1 else 's' }}</h2>
+        </div>
+        <a class="link" href="/tests/{{ test.id }}/questions/new">Add question</a>
+    </header>
+
+    {% if test.questions %}
+    <ol class="question-list">
+        {% for question in test.questions %}
+        <li class="question-item">
+            <div class="question-main">
+                <p class="eyebrow">Order {{ question.order_index }}</p>
+                <p class="muted">Type: {{ question.type.replace("_", " ") }}</p>
+                <p class="question-text">{{ question.text }}</p>
+                <p class="muted">Points: {{ question.points }}</p>
+            </div>
+            {% if question.answer_options %}
+            <ul class="options">
+                {% for option in question.answer_options %}
+                <li class="{{ 'option-correct' if option.is_correct else 'option' }}">
+                    {{ option.text }}
+                    {% if option.is_correct %}<span class="tag">Correct</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if can_manage %}
+            <div class="inline-actions">
+                <a class="link" href="/questions/{{ question.id }}">View</a>
+                <a class="link" href="/questions/{{ question.id }}/edit">Edit</a>
+                <form method="post" action="/questions/{{ question.id }}/delete" onsubmit="return confirm('Delete this question?');">
+                    <button class="link danger" type="submit">Delete</button>
+                </form>
+            </div>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">No questions added yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

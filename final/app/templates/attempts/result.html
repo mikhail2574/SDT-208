@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <p class="eyebrow">Attempt #{{ attempt.id }} · Test {{ test.id }}</p>
+            <h1>Result</h1>
+            <p class="muted">
+                Score: {{ attempt.score_obtained or 0 }} / {{ attempt.max_score_cached or 0 }}
+                {% if attempt.finished_at %} · Finished {{ attempt.finished_at }}{% endif %}
+            </p>
+        </div>
+        <a class="link" href="/tests/{{ test.id }}">Back to test</a>
+    </header>
+
+    <ol class="question-list">
+        {% for item in question_results %}
+        {% set question = item.question %}
+        {% set answer = item.answer %}
+        {% set selected_ids = item.selected_ids %}
+        <li class="question-item">
+            <div class="question-main">
+                <p class="eyebrow">Question {{ loop.index }}</p>
+                <p class="question-text">{{ question.text }}</p>
+                <p class="muted">Points: {{ question.points }}</p>
+            </div>
+            <div class="options">
+                {% if question.type == 'free_text' %}
+                    <p class="muted">Your answer:</p>
+                    <p>{{ answer.free_text_answer if answer and answer.free_text_answer else 'No answer provided.' }}</p>
+                {% else %}
+                    <p class="muted">Your selection:</p>
+                    <ul class="options">
+                        {% for opt in question.answer_options %}
+                        {% set selected = opt.id in selected_ids %}
+                        <li class="{{ 'option-correct' if opt.is_correct else 'option' }}">
+                            {% if selected %}<span class="pill">Chosen</span>{% endif %}
+                            {{ opt.text }}
+                            {% if opt.is_correct %}<span class="tag">Correct</span>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+            <div class="pill {{ 'success' if answer and answer.is_correct else '' }}">
+                Result: 
+                {% if answer is none %}
+                    Not answered
+                {% elif answer.is_correct is none %}
+                    Pending manual review
+                {% elif answer.is_correct %}
+                    Correct (+{{ answer.points_obtained or 0 }})
+                {% else %}
+                    Incorrect (+0)
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% endblock %}
