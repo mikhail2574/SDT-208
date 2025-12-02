@@ -3,15 +3,17 @@
 {% block content %}
 <section class="hero">
     <div>
-        <p class="eyebrow">Catalog</p>
-        <h1>Published & draft tests</h1>
-        <p class="lede">Browse available assessments. Authors can see their drafts.</p>
+        <p class="eyebrow">Test library</p>
+        <h1>Discover quizzes crafted by authors</h1>
+        <p class="lede">Filter by difficulty, see status at a glance, and jump into practice.</p>
     </div>
-    {% if current_user and (has_role(current_user, "AUTHOR") or has_role(current_user, "ADMIN")) %}
-    <a class="primary-btn" href="/tests/new">Create test</a>
-    {% else %}
-    <a class="ghost-btn" href="/auth/login">Login to author</a>
-    {% endif %}
+    <div class="inline-actions">
+        {% if current_user and (has_role(current_user, "AUTHOR") or has_role(current_user, "ADMIN")) %}
+        <a class="primary-btn" href="/tests/new">Create test</a>
+        {% else %}
+        <a class="ghost-btn" href="/auth/login">Login to author</a>
+        {% endif %}
+    </div>
 </section>
 
 <section class="panel">
@@ -20,30 +22,28 @@
             <p class="eyebrow">Available tests</p>
             <h2>{{ tests|length }} item{{ '' if tests|length == 1 else 's' }}</h2>
         </div>
+        <div class="legend">
+            <span class="pill pill-muted">Draft</span>
+            <span class="pill">Published</span>
+        </div>
     </header>
     {% if tests %}
-    <div class="grid">
+    <div class="grid three">
         {% for test in tests %}
-        <article class="card">
-            <header>
-                <p class="eyebrow">ID {{ test.id }}</p>
-                <h2><a href="/tests/{{ test.id }}">{{ test.title }}</a></h2>
-            </header>
-            <p class="muted">{{ test.description or "No description yet." }}</p>
-            <dl class="meta">
+        <article class="card test-card">
+            <div class="card-top">
                 <div>
-                    <dt>Status</dt>
-                    <dd>{{ "Published" if test.is_published else "Draft" }}</dd>
+                    <p class="eyebrow">ID {{ test.id }}</p>
+                    <h2><a href="/tests/{{ test.id }}">{{ test.title }}</a></h2>
+                    <p class="muted line-clamp">{{ test.description or "No description yet." }}</p>
                 </div>
-                <div>
-                    <dt>Difficulty</dt>
-                    <dd>{{ test.difficulty or "N/A" }}</dd>
-                </div>
-                <div>
-                    <dt>Questions</dt>
-                    <dd>{{ test.questions|length }}</dd>
-                </div>
-            </dl>
+                <span class="pill {{ '' if test.is_published else 'pill-muted' }}">{{ "Published" if test.is_published else "Draft" }}</span>
+            </div>
+            <div class="pill-row">
+                <span class="badge">Difficulty {{ test.difficulty or "N/A" }}</span>
+                <span class="badge">Questions {{ test.questions|length }}</span>
+                <span class="badge">ID {{ test.id }}</span>
+            </div>
             <footer class="card-actions">
                 <a class="link" href="/tests/{{ test.id }}">View</a>
                 {% if current_user and (has_role(current_user, "AUTHOR") or has_role(current_user, "ADMIN")) %}

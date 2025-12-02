@@ -50,3 +50,7 @@ WHERE c.credits >= 5
   AND s.enrollment_year >= 2022
 GROUP BY c.id, c.title
 ORDER BY enrollment_count DESC;
+
+The second query is faster because PostgreSQL filters and groups the data before sorting,
+so it sorts only a small aggregated result instead of thousands of joined rows.
+This drastically reduces the work the optimizer must do, making the plan more efficient.

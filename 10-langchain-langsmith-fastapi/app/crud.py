@@ -74,7 +74,7 @@ def save_chat_messages(
     assistant_answer: str,
 ) -> None:
     """Persist one conversation turn (user + assistant messages)."""
-    now = datetime.utcnow()
+    now = datetime.now()
     user_msg = models.ChatMessage(
         user_id=user.id,
         role="user",

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -7,11 +8,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import ai, models
 from ..auth import get_current_user, has_role, require_user
 from ..database import get_db
 
 router = APIRouter(tags=["attempts"])
+logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 templates.env.globals["has_role"] = has_role
@@ -103,6 +105,11 @@ def attempt_detail(
     if not _can_view_test(test, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
 
+    remaining_seconds = None
+    if test.time_limit_seconds:
+        elapsed = (datetime.utcnow() - attempt.started_at).total_seconds()
+        remaining_seconds = max(0, test.time_limit_seconds - elapsed)
+
     return templates.TemplateResponse(
         "attempts/take.html",
         {
@@ -111,6 +118,7 @@ def attempt_detail(
             "test": test,
             "errors": [],
             "current_user": current_user,
+            "remaining_seconds": remaining_seconds,
             "page_title": f"Attempt #{attempt.id}",
         },
     )
@@ -162,6 +170,145 @@ def _score_question(
     selected_set = set(selected_ids)
     is_correct = selected_set == correct_ids and len(selected_set) > 0
     return is_correct, float(question.points) if is_correct else 0.0
+
+
+def _build_question_results(
+    test: models.Test, attempt: models.Attempt
+) -> List[Dict[str, object]]:
+    answers_map: Dict[int, models.AttemptAnswer] = {
+        ans.question_id: ans for ans in attempt.answers
+    }
+    question_results: List[Dict[str, object]] = []
+    for question in test.questions:
+        ans = answers_map.get(question.id)
+        selected_ids: List[int] = []
+        if question.type == "single_choice" and ans and ans.selected_option_id:
+            selected_ids = [ans.selected_option_id]
+        elif question.type == "multiple_choice" and ans and ans.free_text_answer:
+            try:
+                selected_ids = [int(val) for val in ans.free_text_answer.split(",") if val]
+            except ValueError:
+                selected_ids = []
+
+        question_results.append(
+            {
+                "question": question,
+                "answer": ans,
+                "selected_ids": selected_ids,
+            }
+        )
+    return question_results
+
+
+def _build_ai_request(
+    test: models.Test,
+    attempt: models.Attempt,
+    question_results: List[Dict[str, object]],
+) -> ai.AttemptInsightRequest:
+    max_score = float(attempt.max_score_cached or _compute_max_score(test))
+    score_obtained = float(attempt.score_obtained or 0)
+
+    questions_payload: List[ai.QuestionInsight] = []
+    for item in question_results:
+        question: models.Question = item["question"]  # type: ignore
+        answer: Optional[models.AttemptAnswer] = item.get("answer")  # type: ignore
+        selected_ids: List[int] = item.get("selected_ids", [])  # type: ignore
+
+        correct_options = [opt.text for opt in question.answer_options if opt.is_correct]
+        correct_answer = ", ".join(correct_options) if correct_options else ""
+        if question.type == "free_text" and not correct_answer:
+            correct_answer = "Manual review needed"
+
+        if question.type == "free_text":
+            user_answer = (
+                answer.free_text_answer
+                if answer and answer.free_text_answer
+                else "No answer provided."
+            )
+        else:
+            selected_texts = [
+                opt.text for opt in question.answer_options if opt.id in selected_ids
+            ]
+            user_answer = ", ".join(selected_texts) if selected_texts else "No answer provided."
+
+        status = "Not answered"
+        if answer:
+            if answer.is_correct is None:
+                status = "Pending manual review"
+            elif answer.is_correct:
+                status = "Correct"
+            else:
+                status = "Incorrect"
+
+        questions_payload.append(
+            ai.QuestionInsight(
+                question_text=question.text,
+                type=question.type,
+                user_answer=user_answer,
+                correct_answer=correct_answer,
+                status=status,
+                points=float(question.points),
+            )
+        )
+
+    return ai.AttemptInsightRequest(
+        test_title=test.title,
+        score_obtained=score_obtained,
+        max_score=max_score,
+        questions=questions_payload,
+    )
+
+
+def _create_practice_quiz(
+    db: Session,
+    owner: models.User,
+    quiz: ai.PracticeQuiz,
+) -> models.Test:
+    test = models.Test(
+        title=quiz.title[:255],
+        description=quiz.description[:2000],
+        difficulty=quiz.questions and 3 or 1,
+        time_limit_seconds=900,
+        is_published=True,
+        created_by=owner.id,
+    )
+    db.add(test)
+    db.flush()
+
+    for idx, q in enumerate(quiz.questions):
+        text = str(q.get("text") or f"Question {idx + 1}")
+        options = q.get("options") or []
+        if not isinstance(options, list) or len(options) < 2:
+            options = [f"Option {i+1}" for i in range(4)]
+        correct_index = q.get("correct_option", 0)
+        try:
+            correct_index = int(correct_index)
+        except (TypeError, ValueError):
+            correct_index = 0
+        points = float(q.get("points") or 1.0)
+
+        question = models.Question(
+            test_id=test.id,
+            text=text[:4000],
+            type="single_choice",
+            order_index=idx,
+            points=points,
+        )
+        db.add(question)
+        db.flush()
+        for opt_idx, opt_text in enumerate(options[:4]):
+            db.add(
+                models.AnswerOption(
+                    question_id=question.id,
+                    text=str(opt_text)[:500],
+                    is_correct=opt_idx == correct_index,
+                    order_index=opt_idx,
+                )
+            )
+
+    db.commit()
+    db.refresh(test)
+    return test
 
 
 @router.post("/attempts/{attempt_id}/submit", response_class=HTMLResponse)
@@ -288,29 +435,7 @@ def view_result(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     test = attempt.test
-    answers_map: Dict[int, models.AttemptAnswer] = {
-        ans.question_id: ans for ans in attempt.answers
-    }
-
-    question_results = []
-    for question in test.questions:
-        ans = answers_map.get(question.id)
-        selected_ids: List[int] = []
-        if question.type == "single_choice" and ans and ans.selected_option_id:
-            selected_ids = [ans.selected_option_id]
-        elif question.type == "multiple_choice" and ans and ans.free_text_answer:
-            try:
-                selected_ids = [int(val) for val in ans.free_text_answer.split(",") if val]
-            except ValueError:
-                selected_ids = []
-
-        question_results.append(
-            {
-                "question": question,
-                "answer": ans,
-                "selected_ids": selected_ids,
-            }
-        )
+    question_results = _build_question_results(test, attempt)
 
     return templates.TemplateResponse(
         "attempts/result.html",
@@ -319,6 +444,107 @@ def view_result(
             "attempt": attempt,
             "test": test,
             "question_results": question_results,
+            "current_user": current_user,
+            "ai_feedback": None,
+            "ai_error": None,
+            "ai_quiz_error": None,
+            "ai_quiz_link": None,
+            "page_title": "Attempt result",
+        },
+    )
+
+
+@router.post("/attempts/{attempt_id}/ai-feedback", response_class=HTMLResponse)
+async def attempt_ai_feedback(
+    request: Request,
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user),
+):
+    attempt = _get_attempt(db, attempt_id)
+    _require_attempt_owner(attempt, current_user)
+    if attempt.status != "completed":
+        return RedirectResponse(
+            url=f"/attempts/{attempt.id}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    test = attempt.test
+    question_results = _build_question_results(test, attempt)
+    ai_feedback_text = None
+    ai_error = None
+
+    try:
+        ai_request = _build_ai_request(test, attempt, question_results)
+        ai_feedback_text = await ai.generate_attempt_feedback(ai_request)
+    except ai.AIServiceError as exc:
+        ai_error = str(exc)
+    except Exception as exc:  # pragma: no cover - network failures vary
+        logger.exception("AI feedback failed unexpectedly", exc_info=exc)
+        ai_error = "AI feedback failed unexpectedly. Please try again."
+
+    return templates.TemplateResponse(
+        "attempts/result.html",
+        {
+            "request": request,
+            "attempt": attempt,
+            "test": test,
+            "question_results": question_results,
+            "ai_feedback": ai_feedback_text,
+            "ai_error": ai_error,
+            "ai_quiz_error": None,
+            "ai_quiz_link": None,
+            "current_user": current_user,
+            "page_title": "Attempt result",
+        },
+    )
+
+
+@router.post("/attempts/{attempt_id}/ai-quiz", response_class=HTMLResponse)
+async def attempt_ai_quiz(
+    request: Request,
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_user),
+):
+    attempt = _get_attempt(db, attempt_id)
+    _require_attempt_owner(attempt, current_user)
+    if attempt.status != "completed":
+        return RedirectResponse(
+            url=f"/attempts/{attempt.id}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    test = attempt.test
+    question_results = _build_question_results(test, attempt)
+
+    ai_feedback_text = None
+    ai_error = None
+    ai_quiz_error = None
+    ai_quiz_link = None
+
+    try:
+        ai_request = _build_ai_request(test, attempt, question_results)
+        practice_quiz = await ai.generate_practice_quiz(ai_request)
+        new_test = _create_practice_quiz(db, current_user, practice_quiz)
+        ai_quiz_link = f"/tests/{new_test.id}"
+    except ai.AIServiceError as exc:
+        ai_quiz_error = str(exc)
+    except Exception as exc:  # pragma: no cover - network failures vary
+        logger.exception("AI practice quiz failed unexpectedly", exc_info=exc)
+        ai_quiz_error = "AI practice quiz failed unexpectedly. Please try again."
+
+    return templates.TemplateResponse(
+        "attempts/result.html",
+        {
+            "request": request,
+            "attempt": attempt,
+            "test": test,
+            "question_results": question_results,
+            "ai_feedback": ai_feedback_text,
+            "ai_error": ai_error,
+            "ai_quiz_error": ai_quiz_error,
+            "ai_quiz_link": ai_quiz_link,
             "current_user": current_user,
             "page_title": "Attempt result",
         },

@@ -23,17 +23,22 @@
     </header>
 
     {% if question.type != 'free_text' %}
-    <div class="options-grid">
-        <p class="eyebrow">Answer options</p>
-        <ul class="options">
-            {% for option in question.answer_options %}
-            <li class="{{ 'option-correct' if option.is_correct else 'option' }}">
-                {{ option.text }}
-                {% if option.is_correct %}<span class="tag">Correct</span>{% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
+        {% if can_manage %}
+        <div class="options-grid">
+            <p class="eyebrow">Answer options</p>
+            <ul class="options">
+                {% for option in question.answer_options %}
+                {% set opt_class = 'option-correct' if option.is_correct else 'option' %}
+                <li class="{{ opt_class }}">
+                    {{ option.text }}
+                    {% if option.is_correct %}<span class="tag">Correct</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+            <p class="muted">Options hidden. Start the test to view choices.</p>
+        {% endif %}
     {% else %}
     <p class="muted">This is a free text question (no predefined options).</p>
     {% endif %}

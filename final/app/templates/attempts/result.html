@@ -14,6 +14,68 @@
         <a class="link" href="/tests/{{ test.id }}">Back to test</a>
     </header>
 
+    <section class="panel panel--sub">
+        <div class="panel__header">
+            <div>
+                <p class="eyebrow">AI study coach</p>
+                <h2>Personalized feedback & practice</h2>
+                <p class="muted">LangChain + OpenAI summarize your attempt, suggest resources, and can craft a practice quiz.</p>
+            </div>
+            <div class="inline-actions">
+                <form method="post" action="/attempts/{{ attempt.id }}/ai-feedback">
+                    <button class="primary-btn" type="submit">Generate feedback</button>
+                </form>
+                <form method="post" action="/attempts/{{ attempt.id }}/ai-quiz">
+                    <button class="ghost-btn" type="submit">Generate practice quiz</button>
+                </form>
+            </div>
+        </div>
+        {% if ai_error %}
+            <div class="alert">{{ ai_error }}</div>
+        {% endif %}
+        {% if ai_feedback %}
+            <textarea id="ai-feedback-raw" hidden>{{ ai_feedback }}</textarea>
+            <div class="ai-output" id="ai-feedback-rendered"></div>
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+            <script>
+                (() => {
+                    const rawEl = document.getElementById("ai-feedback-raw");
+                    const target = document.getElementById("ai-feedback-rendered");
+                    if (!rawEl || !target) return;
+                    const raw = rawEl.textContent || "";
+                    const html = marked.parse(raw, { breaks: true });
+                    target.innerHTML = html;
+                    const mermaidBlocks = target.querySelectorAll("code.language-mermaid");
+                    if (mermaidBlocks.length) {
+                        mermaid.initialize({ startOnLoad: false, theme: "dark" });
+                        mermaidBlocks.forEach((block, idx) => {
+                            const container = document.createElement("div");
+                            container.className = "mermaid";
+                            container.textContent = block.textContent;
+                            const pre = block.closest("pre");
+                            if (pre) {
+                                pre.replaceWith(container);
+                            } else {
+                                block.replaceWith(container);
+                            }
+                        });
+                        mermaid.run();
+                    }
+                })();
+            </script>
+        {% elif ai_quiz_link %}
+            <div class="success-banner">
+                <p class="muted">Practice quiz ready.</p>
+                <a class="primary-btn" href="{{ ai_quiz_link }}">Open your AI-generated quiz</a>
+            </div>
+        {% elif ai_quiz_error %}
+            <div class="alert">{{ ai_quiz_error }}</div>
+        {% else %}
+            <p class="muted">Click "Generate feedback" to get a concise, attempt-aware study plan.</p>
+        {% endif %}
+    </section>
+
     <ol class="question-list">
         {% for item in question_results %}
         {% set question = item.question %}

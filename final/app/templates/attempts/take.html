@@ -1,17 +1,38 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="panel">
+<section class="panel panel--exam">
     <header class="panel__header">
         <div>
             <p class="eyebrow">Attempt #{{ attempt.id }} · Test {{ test.id }}</p>
             <h1>{{ test.title }}</h1>
-            {% if test.time_limit_seconds %}
-            <p class="muted">Time limit: {{ test.time_limit_seconds // 60 }} minutes (not enforced in UI).</p>
-            {% endif %}
+            <p class="muted">Answer carefully; you can review before submitting.</p>
         </div>
-        <a class="link" href="/tests/{{ test.id }}">Back to test</a>
+        <div class="inline-actions">
+            {% if test.time_limit_seconds %}
+            <span class="pill timer-pill" id="timer-pill">Time remaining: --:--</span>
+            {% endif %}
+            <a class="link" href="/tests/{{ test.id }}">Back to test</a>
+        </div>
     </header>
+
+    <div class="exam-summary">
+        <div>
+            <p class="muted">Questions</p>
+            <h3>{{ test.questions|length }}</h3>
+        </div>
+        <div>
+            <p class="muted">Max score</p>
+            <h3>{{ attempt.max_score_cached or 0 }}</h3>
+        </div>
+        <div class="progress">
+            <div class="progress__label">Progress <span id="progress-meta">0/{{ test.questions|length }}</span></div>
+            <div class="progress__bar">
+                <span style="width: 0%"></span>
+            </div>
+            <p class="muted small">Mark all questions, then submit.</p>
+        </div>
+    </div>
 
     {% if errors %}
     <div class="alert">
@@ -24,17 +45,21 @@
     </div>
     {% endif %}
 
-    <form class="form" method="post" action="/attempts/{{ attempt.id }}/submit">
+    <form class="form" method="post" action="/attempts/{{ attempt.id }}/submit" id="attempt-form" data-total="{{ test.questions|length }}" data-time-limit="{{ (test.time_limit_seconds or 0)|int }}" data-remaining="{{ remaining_seconds|int if remaining_seconds is not none else '' }}">
         {% for question in test.questions %}
-        <div class="question-block">
-            <p class="eyebrow">Question {{ loop.index }}</p>
-            <p class="question-text">{{ question.text }}</p>
-            <p class="muted">Type: {{ question.type.replace("_"," ") }} · {{ question.points }} pts</p>
+        <div class="question-block" data-type="{{ question.type }}" data-qid="{{ question.id }}">
+            <div class="question-head">
+                <div>
+                    <p class="eyebrow">Question {{ loop.index }} · {{ question.points }} pts</p>
+                    <p class="question-text">{{ question.text }}</p>
+                </div>
+                <span class="pill">{{ question.type.replace("_"," ") }}</span>
+            </div>
 
             {% if question.type == 'free_text' %}
                 <textarea name="q_{{ question.id }}_text" rows="3" placeholder="Type your answer"></textarea>
             {% elif question.type == 'single_choice' %}
-                <div class="options">
+                <div class="options options-grid">
                     {% for opt in question.answer_options %}
                     <label class="option-row radio">
                         <input type="radio" name="q_{{ question.id }}" value="{{ opt.id }}">
@@ -43,7 +68,7 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="options">
+                <div class="options options-grid">
                     {% for opt in question.answer_options %}
                     <label class="option-row checkbox">
                         <input type="checkbox" name="q_{{ question.id }}" value="{{ opt.id }}">
@@ -61,4 +86,66 @@
         </div>
     </form>
 </section>
+
+<script>
+    (() => {
+        const form = document.getElementById("attempt-form");
+        if (!form) return;
+        const total = Number(form.dataset.total || 0);
+        const progressBar = document.querySelector(".progress__bar span");
+        const progressMeta = document.getElementById("progress-meta");
+        const timerPill = document.getElementById("timer-pill");
+        const timeLimit = Number(form.dataset.timeLimit || 0);
+        let remainingSeconds = Number(form.dataset.remaining || 0);
+        if (!Number.isFinite(remainingSeconds) || remainingSeconds < 0) {
+            remainingSeconds = timeLimit;
+        }
+        let countdownStart = Date.now();
+
+        const computeProgress = () => {
+            let answered = 0;
+            document.querySelectorAll(".question-block").forEach((block) => {
+                const type = block.dataset.type;
+                if (type === "free_text") {
+                    const ta = block.querySelector("textarea");
+                    if (ta && ta.value.trim()) answered++;
+                } else if (type === "single_choice") {
+                    if (block.querySelector("input[type=radio]:checked")) answered++;
+                } else {
+                    if (block.querySelector("input[type=checkbox]:checked")) answered++;
+                }
+            });
+            const pct = total ? Math.round((answered / total) * 100) : 0;
+            if (progressBar) progressBar.style.width = `${pct}%`;
+            if (progressMeta) progressMeta.textContent = `${answered}/${total}`;
+        };
+
+        form.querySelectorAll("input, textarea").forEach((el) => {
+            el.addEventListener("input", computeProgress);
+            el.addEventListener("change", computeProgress);
+        });
+        computeProgress();
+
+        if (timerPill) {
+            if (!Number.isFinite(timeLimit) || timeLimit <= 0) {
+                timerPill.textContent = "No time limit";
+            } else {
+                const tick = () => {
+                    const elapsedMs = Date.now() - countdownStart;
+                    const remainingMs = Math.max(0, remainingSeconds * 1000 - elapsedMs);
+                    const totalSeconds = Math.floor(remainingMs / 1000);
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    timerPill.textContent = `Time remaining: ${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+                    if (remainingMs <= 0) {
+                        timerPill.classList.add("danger");
+                        clearInterval(interval);
+                    }
+                };
+                tick();
+                const interval = setInterval(tick, 1000);
+            }
+        }
+    })();
+</script>
 {% endblock %}
