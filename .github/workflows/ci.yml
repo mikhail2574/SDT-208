@@ -44,10 +44,10 @@ jobs:
             sleep 2
           done
 
-      - name: Create test database
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE testhub_test;"
+      # - name: Create test database
+      #   env:
+      #     PGPASSWORD: postgres
+      #   run: psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE testhub_test;"
 
       - name: Install dependencies
         run: |
