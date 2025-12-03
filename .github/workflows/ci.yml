@@ -7,9 +7,7 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: final
+
     services:
       postgres:
         image: postgres:16
@@ -44,19 +42,17 @@ jobs:
             sleep 2
           done
 
-      # - name: Create test database
-      #   env:
-      #     PGPASSWORD: postgres
-      #   run: psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE testhub_test;"
-
       - name: Install dependencies
+        working-directory: ./final
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run tests
+        working-directory: ./final
         env:
           DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/testhub_test
           SECRET_KEY: ci-secret
           OPENAI_API_KEY: dummy-ci-key
-        run: pytest --cov=final/app --cov-report=term-missing
+        run: |
+          python -m pytest --cov=app --cov-report=term-missing
