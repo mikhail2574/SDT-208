@@ -59,4 +59,4 @@ jobs:
           DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/testhub_test
           SECRET_KEY: ci-secret
           OPENAI_API_KEY: dummy-ci-key
-        run: pytest --cov=app --cov-report=term-missing
+        run: pytest --cov=final/app --cov-report=term-missing
