@@ -66,6 +66,28 @@ Visit http://127.0.0.1:8000/tests
 
 - Seeder adds author `author@gmail.com` (password: `AuthorPass123!`) and two published sample tests (Linear Geometry Deep Dive, Advanced Python Engineering) if they don't already exist.
 
+## Testing
+
+- Bring up PostgreSQL (via `docker compose up -d db`) and create the test database once:
+
+```bash
+docker compose exec db psql -U postgres -c "CREATE DATABASE testhub_test;"
+```
+
+- Point to the test DB (defaults to `postgresql+psycopg://postgres:postgres@localhost:5433/testhub_test` in `tests/conftest.py`), then run:
+
+```bash
+pytest --cov=app --cov-report=term-missing
+```
+
+Tests reset the schema per-test, hit the real FastAPI routes (auth, CRUD, attempts, AI error handling), and mock AI calls so no OpenAI traffic is required; a dummy `OPENAI_API_KEY` is sufficient.
+
+## CI/CD
+
+- GitHub Actions workflow: `.github/workflows/ci.yml`.
+- Triggers on pushes/PRs, starts a PostgreSQL 16 service, creates `testhub_test`, installs dependencies, and runs `pytest --cov=app`.
+- Mirrors local setup (FastAPI + Jinja2 + PostgreSQL + LangChain/OpenAI dependencies) and reports pass/fail in GitHub checks.
+
 ## Notes
 
 - Tables auto-create on startup and seed roles/admin user from `.env`.
