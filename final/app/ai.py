@@ -83,7 +83,7 @@ async def generate_attempt_feedback(payload: AttemptInsightRequest) -> str:
                     "Question performance (subset if long):\n"
                     "{question_block}\n\n"
                     "Write at most 6 bullet points: 2 strengths, 2-3 improvements with targeted resources "
-                    "(links allowed), and one actionable next step. Keep it under 200 words."
+                    "(links allowed), and one actionable next step. Keep it under 250 words."
                 ),
             ),
         ]

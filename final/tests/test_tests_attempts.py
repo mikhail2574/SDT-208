@@ -118,3 +118,43 @@ def test_start_attempt_requires_authentication(client, db_session):
 
     resp = client.post(f"/tests/{seeded_test.id}/attempts", follow_redirects=False)
     assert resp.status_code == 401
+
+
+def test_deleting_test_removes_attempts(client, db_session):
+    _register_author(client)
+    create_resp = client.post(
+        "/tests/new",
+        data={
+            "title": "Cascade Test",
+            "description": "Ensure attempts are deleted too",
+            "is_published": "on",
+        },
+        follow_redirects=False,
+    )
+    test_id = int(create_resp.headers["location"].split("/")[-1])
+
+    question_resp = client.post(
+        f"/tests/{test_id}/questions/new",
+        data={
+            "text": "Select 1",
+            "type": "single_choice",
+            "order_index": "0",
+            "points": "1",
+            "option_text_1": "One",
+            "option_correct_1": "on",
+            "option_text_2": "Two",
+        },
+        follow_redirects=False,
+    )
+    assert question_resp.status_code == 303
+
+    start_resp = client.post(f"/tests/{test_id}/attempts", follow_redirects=False)
+    assert start_resp.status_code == 303
+
+    delete_resp = client.post(f"/tests/{test_id}/delete", follow_redirects=False)
+    assert delete_resp.status_code == 303
+
+    db_session.expire_all()
+    assert db_session.query(models.Test).filter_by(id=test_id).count() == 0
+    assert db_session.query(models.Attempt).filter_by(test_id=test_id).count() == 0
+    assert db_session.query(models.AttemptAnswer).count() == 0

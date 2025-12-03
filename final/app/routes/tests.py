@@ -332,6 +332,16 @@ def delete_test(
     test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not test or not _can_manage_test(test, current_user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+
+    # Ensure attempts (and their answers) are removed before deleting the test to satisfy FK constraints.
+    attempt_ids = [
+        row.id
+        for row in db.query(models.Attempt.id).filter(models.Attempt.test_id == test.id).all()
+    ]
+    if attempt_ids:
+        db.query(models.AttemptAnswer).filter(models.AttemptAnswer.attempt_id.in_(attempt_ids)).delete(synchronize_session=False)
+        db.query(models.Attempt).filter(models.Attempt.id.in_(attempt_ids)).delete(synchronize_session=False)
+
     db.delete(test)
     db.commit()
     return RedirectResponse(url="/tests", status_code=status.HTTP_303_SEE_OTHER)

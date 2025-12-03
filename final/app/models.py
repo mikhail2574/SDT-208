@@ -74,14 +74,24 @@ class Test(Base, TimestampMixin):
         order_by="Question.order_index",
         cascade="all, delete-orphan",
     )
-    attempts = relationship("Attempt", back_populates="test")
+    attempts = relationship(
+        "Attempt",
+        back_populates="test",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class Question(Base):
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, index=True)
-    test_id = Column(Integer, ForeignKey("tests.id"), nullable=False, index=True)
+    test_id = Column(
+        Integer,
+        ForeignKey("tests.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     text = Column(Text, nullable=False)
     type = Column(String, nullable=False)  # single_choice, multiple_choice, free_text
     order_index = Column(Integer, nullable=False, default=0)
@@ -119,7 +129,11 @@ class Attempt(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    test_id = Column(Integer, ForeignKey("tests.id"), nullable=False)
+    test_id = Column(
+        Integer,
+        ForeignKey("tests.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     finished_at = Column(DateTime)
     status = Column(String, nullable=False)  # in_progress, completed, cancelled
@@ -128,15 +142,28 @@ class Attempt(Base, TimestampMixin):
 
     user = relationship("User", back_populates="attempts")
     test = relationship("Test", back_populates="attempts")
-    answers = relationship("AttemptAnswer", back_populates="attempt")
+    answers = relationship(
+        "AttemptAnswer",
+        back_populates="attempt",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class AttemptAnswer(Base):
     __tablename__ = "attempt_answers"
 
     id = Column(Integer, primary_key=True, index=True)
-    attempt_id = Column(Integer, ForeignKey("attempts.id"), nullable=False)
-    question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
+    attempt_id = Column(
+        Integer,
+        ForeignKey("attempts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    question_id = Column(
+        Integer,
+        ForeignKey("questions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     selected_option_id = Column(Integer, ForeignKey("answer_options.id"))
     free_text_answer = Column(Text)
     is_correct = Column(Boolean)
